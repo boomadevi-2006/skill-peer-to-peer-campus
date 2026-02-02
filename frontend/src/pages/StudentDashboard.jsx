@@ -1,14 +1,37 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
 
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
+  const [mySkillsCount, setMySkillsCount] = useState(0);
+  const [sessionsLearnerCount, setSessionsLearnerCount] = useState(0);
+  const [sessionsMentorCount, setSessionsMentorCount] = useState(0);
 
   useEffect(() => {
     api.get("/api/auth/me").then((r) => updateUser(r.data)).catch(() => {});
   }, [updateUser]);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get("/api/skills/my")
+      .then((r) => setMySkillsCount((r.data || []).length))
+      .catch(() => setMySkillsCount(0));
+    api
+      .get("/api/sessions/my")
+      .then((r) => {
+        const asLearner = ((r.data && r.data.asLearner) || []);
+        const asMentor = ((r.data && r.data.asMentor) || []);
+        setSessionsLearnerCount(asLearner.length);
+        setSessionsMentorCount(asMentor.length);
+      })
+      .catch(() => {
+        setSessionsLearnerCount(0);
+        setSessionsMentorCount(0);
+      });
+  }, [user]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -19,16 +42,16 @@ export default function StudentDashboard() {
 
   const stats = [
     { label: "Your Points", value: user?.points ?? 0, description: "Earn points by mentoring" },
-    { label: "Skills to Teach", value: user?.skills?.length || 0, description: "Share your expertise" },
-    { label: "Sessions Joined", value: user?.sessionsAsLearner?.length || 0, description: "Learning journey" },
+    { label: "Skills to Teach", value: mySkillsCount || 0, description: "Share your expertise" },
+    { label: "Sessions Joined", value: (sessionsLearnerCount + sessionsMentorCount) || 0, description: `Learner: ${sessionsLearnerCount} • Mentor: ${sessionsMentorCount}` },
   ];
 
   const quickLinks = [
-    { to: "/skills", label: "My Skills", desc: "Manage what you teach" },
-    { to: "/browse", label: "Browse Skills", desc: "Find something new" },
-    { to: "/sessions", label: "Sessions", desc: "Your learning sessions" },
-    { to: "/chat", label: "Chat", desc: "Connect with peers" },
-    { to: "/leaderboard", label: "Leaderboard", desc: "Top mentors" },
+    { to: "/skills", label: "My Skills", desc: "Manage what you teach", icon: "🎯" },
+    { to: "/browse", label: "Browse Skills", desc: "Find something new", icon: "🔍" },
+    { to: "/sessions", label: "Sessions", desc: "Your learning sessions", icon: "📅" },
+    { to: "/chat", label: "Chat", desc: "Connect with peers", icon: "💬" },
+    { to: "/leaderboard", label: "Leaderboard", desc: "Top mentors", icon: "🏆" },
   ];
 
   return (
@@ -71,7 +94,7 @@ export default function StudentDashboard() {
             style={{ animationDelay: `${(index + 3) * 100}ms` }}
           >
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-xl transition-transform group-hover:scale-110">
-              →
+              {link.icon}
             </div>
             <div>
               <h3 className="font-bold text-gray-800 group-hover:text-primary transition-colors">
