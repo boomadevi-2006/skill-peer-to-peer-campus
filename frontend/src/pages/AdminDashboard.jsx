@@ -289,12 +289,21 @@ export default function AdminDashboard({ tab: propTab }) {
   // Simple session card used by SessionsManagement
   
   function SessionCard({ session }) {
-    const skill = session.skill || session.skillId?.title || session.skillId?.title;
-    const mentorName = session.mentorName || session.mentorId?.name || session.mentorId?.name;
-    const learnerName = session.learnerName || session.learnerId?.name || session.learnerId?.name;
-    const mentorEmail = session.mentorEmail || session.mentorId?.email || session.mentorId?.email;
-    const learnerEmail = session.learnerEmail || session.learnerId?.email || session.learnerId?.email;
-      // Define statCards after uniqueAvailableSkills to avoid reference errors
+    const skill =
+      (typeof session.skill === "string" ? session.skill : "") ||
+      (session.skillId?.title || "");
+    const mentorName =
+      (typeof session.mentorName === "string" ? session.mentorName : "") ||
+      (session.mentorId?.name || "");
+    const learnerName =
+      (typeof session.learnerName === "string" ? session.learnerName : "") ||
+      (session.learnerId?.name || "");
+    const mentorEmail =
+      (typeof session.mentorEmail === "string" ? session.mentorEmail : "") ||
+      (session.mentorId?.email || "");
+    const learnerEmail =
+      (typeof session.learnerEmail === "string" ? session.learnerEmail : "") ||
+      (session.learnerId?.email || "");
   
     return (
       <div className="card-elevated p-4">
@@ -443,9 +452,9 @@ export default function AdminDashboard({ tab: propTab }) {
 
   const pageInfo = getPageTitle();
 const statCards = [
-    { label: "Students", value: stats.userCount, icon: "👥", color: "from-blue-400 to-indigo-400" },
-    { label: "Skills", value: uniqueAvailableSkills.length, icon: "🛠️", color: "from-purple-400 to-pink-400" },
-    { label: "Sessions", value: stats.sessionCount, icon: "📅", color: "from-green-400 to-emerald-400" },
+    { label: "Students", value: stats.userCount, icon: "👥" },
+    { label: "Skills", value: uniqueAvailableSkills.length, icon: "🛠️"},
+    { label: "Sessions", value: stats.sessionCount, icon: "📅" },
   ];
   return (
     <div className="animate-fade-in">
@@ -475,8 +484,10 @@ const statCards = [
                       : index === 1
                       ? "from-purple-400 to-pink-400"
                       : "from-green-400 to-emerald-400"
-                  } flex items-center justify-center text-2xl shadow-lg`}
-                ></div>
+                  } flex items-center justify-center text-2xl`}
+                >
+                  {stat.icon}
+                </div>
               </div>
             </div>
           ))}
@@ -506,7 +517,7 @@ const statCards = [
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex-shrink-0">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-3xl shadow-md">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl">
                       {getSkillIcon(skill.title)}
                     </div>
                   </div>
