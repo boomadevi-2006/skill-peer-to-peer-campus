@@ -12,6 +12,8 @@ export default function SkillListing() {
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("");
   const [teachingMode, setTeachingMode] = useState("flexible");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState("all");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +36,13 @@ export default function SkillListing() {
   const submitRequest = async (e) => {
     e.preventDefault();
     if (!selectedSkill) return;
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    const chosenDate = new Date(date);
+    if (chosenDate < todayMidnight) {
+      alert("Please select today or a future date");
+      return;
+    }
     setRequestingId(selectedSkill._id);
     try {
       await api.post("/api/sessions", {
@@ -53,7 +62,27 @@ export default function SkillListing() {
   };
 
   const myId = user?._id;
-  const filtered = skills.filter((s) => s.mentorId?._id !== myId);
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = skills.filter((s) => {
+    const isMine = s.mentorId?._id === myId;
+    if (!q) return !isMine;
+
+    let fields = [];
+    if (searchType === "all") {
+      fields = [s.title, s.category, s.mentorId?.name];
+    } else if (searchType === "title") {
+      fields = [s.title];
+    } else if (searchType === "mentor") {
+      fields = [s.mentorId?.name];
+    } else if (searchType === "category") {
+      fields = [s.category];
+    }
+
+    const normalizedFields = fields
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase());
+    return normalizedFields.some((v) => v.includes(q));
+  });
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -75,6 +104,40 @@ export default function SkillListing() {
         <p className="section-subtitle">
           Discover skills offered by your peers and request a session to learn
         </p>
+      </div>
+      <div className="mb-6 flex gap-3">
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value)}
+          className="input-field w-32 sm:w-48"
+        >
+          <option value="all">All</option>
+          <option value="title">Title</option>
+          <option value="category">Category</option>
+          <option value="mentor">Mentor</option>
+        </select>
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg
+              className="h-5 w-5 text-gray-400"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-field w-full pl-10"
+            placeholder="Search skills..."
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -109,16 +172,22 @@ export default function SkillListing() {
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-gray-600">
-                  <span className="font-medium">Mentor: {skill.mentorId?.name}</span>
+                  <span className="font-medium">Mentor: {skill.mentorId?.name} {skill.mentorId?._id === myId && "(You)"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <span>{skill.mentorId?.points ?? 0} points</span>
                 </div>
               </div>
 
-              <button onClick={() => openRequest(skill)} className="btn-primary w-full">
-                Request Session
-              </button>
+              {skill.mentorId?._id === myId ? (
+                <button disabled className="btn-secondary w-full opacity-50 cursor-not-allowed">
+                  Your Skill
+                </button>
+              ) : (
+                <button onClick={() => openRequest(skill)} className="btn-primary w-full">
+                  Request Session
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -156,6 +225,7 @@ export default function SkillListing() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="input-field"
+                  min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`}
                   required
                 />
               </div>
@@ -183,7 +253,7 @@ export default function SkillListing() {
                   onChange={(e) => setTeachingMode(e.target.value)}
                   className="input-field"
                 >
-                  <option value="in-person">In-Person (Campus)</option>
+                  <option value="in-person">In-Person (Inside Campus(KEC))</option>
                   <option value="online">Online (Google Meet / Zoom)</option>
                   <option value="flexible">Flexible (Discuss with mentor)</option>
                 </select>
