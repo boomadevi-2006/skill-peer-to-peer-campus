@@ -49,7 +49,7 @@ export default function Layout() {
           <div className="p-6 border-b border-gray-100">
             <NavLink to={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg">
-                S
+                🌱
               </div>
               <div>
                 <h1 className="font-bold text-gray-800">SkillSwap</h1>
