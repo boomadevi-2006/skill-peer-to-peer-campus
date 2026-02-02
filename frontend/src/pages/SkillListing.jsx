@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -43,6 +43,15 @@ export default function SkillListing() {
       alert("Please select today or a future date");
       return;
     }
+    // Validate time slot for same-day requests
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (date === todayStr) {
+      if (!availableSlots || !availableSlots.includes(timeSlot)) {
+        alert("Please select a valid future time slot for today");
+        return;
+      }
+    }
+
     setRequestingId(selectedSkill._id);
     try {
       await api.post("/api/sessions", {
@@ -83,6 +92,42 @@ export default function SkillListing() {
       .map((v) => String(v).toLowerCase());
     return normalizedFields.some((v) => v.includes(q));
   });
+
+  // compute available 1-hour slots (9:00 AM - 6:00 PM)
+  const availableSlots = useMemo(() => {
+    const slots = Array.from({ length: 9 }).map((_, i) => {
+      const startHour = 9 + i; // 9..17 -> last slot 17-18
+      const endHour = startHour + 1;
+      const format = (h) => {
+        const period = h >= 12 ? "PM" : "AM";
+        const hour12 = ((h + 11) % 12) + 1;
+        return `${hour12}:00 ${period}`;
+      };
+      return `${format(startHour)} - ${format(endHour)}`;
+    });
+
+    if (!date) return slots;
+
+    const selected = new Date(date);
+    const today = new Date();
+    selected.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    if (selected.getTime() !== today.getTime()) return slots;
+
+    // For today, filter out past slots
+    const now = new Date();
+    let threshold = now.getHours();
+    if (now.getMinutes() > 0) threshold += 1; // next full hour
+
+    return slots.filter((label) => {
+      const startStr = label.split(" - ")[0]; // e.g. "2:00 PM"
+      const [timePart, period] = startStr.split(" ");
+      const hour = parseInt(timePart.split(":")[0], 10);
+      let h24 = hour % 12;
+      if (period === "PM") h24 += 12;
+      return h24 >= threshold;
+    });
+  }, [date]);
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -232,16 +277,27 @@ export default function SkillListing() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Time Slot
+                  Time Slot (1 hour)
                 </label>
                 <input
+                  list="time-slots"
                   type="text"
                   value={timeSlot}
                   onChange={(e) => setTimeSlot(e.target.value)}
                   className="input-field"
-                  placeholder="e.g. 2:00 PM - 3:00 PM"
+                  placeholder="Select or type to search time..."
                   required
                 />
+                <datalist id="time-slots">
+                  {availableSlots.length > 0 ? (
+                    availableSlots.map((label) => <option key={label} value={label} />)
+                  ) : (
+                    <option value="" />
+                  )}
+                </datalist>
+                {availableSlots.length === 0 && (
+                  <p className="text-sm text-red-500 mt-2">No remaining time slots available for the selected date.</p>
+                )}
               </div>
 
               <div>
