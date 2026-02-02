@@ -252,12 +252,6 @@ export default function AdminDashboard({ tab: propTab }) {
 
   const go = (t) => navigate("/admin" + (t === "dashboard" ? "" : "/" + t));
 
-  const statCards = [
-    { label: "Students", value: stats.userCount },
-    { label: "Skills", value: stats.skillCount },
-    { label: "Sessions", value: stats.sessionCount },
-  ];
-
   const getStatusBadge = (status) => {
     const configs = {
       completed: "badge-success",
@@ -301,11 +295,7 @@ export default function AdminDashboard({ tab: propTab }) {
     const mentorEmail = session.mentorEmail || session.mentorId?.email || session.mentorId?.email;
     const learnerEmail = session.learnerEmail || session.learnerId?.email || session.learnerId?.email;
       // Define statCards after uniqueAvailableSkills to avoid reference errors
-  const statCards = [
-    { label: "Students", value: stats.userCount, icon: "👥", color: "from-blue-400 to-indigo-400" },
-    { label: "Skills", value: uniqueAvailableSkills.length, icon: "🛠️", color: "from-purple-400 to-pink-400" },
-    { label: "Sessions", value: stats.sessionCount, icon: "📅", color: "from-green-400 to-emerald-400" },
-  ];
+  
     return (
       <div className="card-elevated p-4">
         <div className="flex items-start justify-between gap-4">
@@ -452,7 +442,11 @@ export default function AdminDashboard({ tab: propTab }) {
   };
 
   const pageInfo = getPageTitle();
-
+const statCards = [
+    { label: "Students", value: stats.userCount, icon: "👥", color: "from-blue-400 to-indigo-400" },
+    { label: "Skills", value: uniqueAvailableSkills.length, icon: "🛠️", color: "from-purple-400 to-pink-400" },
+    { label: "Sessions", value: stats.sessionCount, icon: "📅", color: "from-green-400 to-emerald-400" },
+  ];
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
