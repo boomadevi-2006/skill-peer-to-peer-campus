@@ -21,15 +21,35 @@ export default function SkillProfile() {
     fetchSkills();
   }, []);
 
+  // Helper to normalize skill title (lowercase, trimmed)
+  const normalizeTitle = (t) => t.trim().toLowerCase();
+
+  // Helper to format title for display (capitalize first letter)
+  const formatTitle = (t) => {
+    const normalized = normalizeTitle(t);
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Normalize title for comparison and storage
+    const normalizedTitle = normalizeTitle(title);
+
+    // Check for duplicates (case-insensitive)
+    const isDuplicate = skills.some((s) => normalizeTitle(s.title) === normalizedTitle);
+    if (isDuplicate) {
+      setError("A skill with this name already exists");
+      return;
+    }
+
     try {
       if (editingId) {
-        await api.patch("/api/skills/" + editingId, { title, category });
+        await api.patch("/api/skills/" + editingId, { title: formatTitle(title), category });
         setEditingId(null);
       } else {
-        await api.post("/api/skills", { title, category });
+        await api.post("/api/skills", { title: formatTitle(title), category });
       }
       setTitle("");
       setCategory("");
@@ -41,7 +61,7 @@ export default function SkillProfile() {
 
   const startEdit = (s) => {
     setEditingId(s._id);
-    setTitle(s.title);
+    setTitle(formatTitle(s.title));
     setCategory(s.category);
   };
 
@@ -163,7 +183,7 @@ export default function SkillProfile() {
                     *
                   </div>
                   <div>
-                    <span className="font-bold text-gray-800">{s.title}</span>
+                    <span className="font-bold text-gray-800">{formatTitle(s.title)}</span>
                     <span className="text-gray-400 mx-2">|</span>
                     <span className={`badge ${getCategoryColor(s.category)}`}>{s.category}</span>
                   </div>
