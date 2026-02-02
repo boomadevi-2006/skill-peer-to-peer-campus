@@ -180,7 +180,7 @@ export default function SkillProfile() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-xl">
-                    *
+                    🎯
                   </div>
                   <div>
                     <span className="font-bold text-gray-800">{formatTitle(s.title)}</span>

@@ -18,12 +18,12 @@ export default function Layout() {
   };
 
   const studentLinks = [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/skills", label: "My Skills" },
-    { to: "/browse", label: "Browse Skills" },
-    { to: "/sessions", label: "Sessions" },
-    { to: "/chat", label: "Chat" },
-    { to: "/leaderboard", label: "Leaderboard" },
+    { to: "/dashboard", label: "Dashboard" , icon: "📊"},
+    { to: "/skills", label: "My Skills" ,icon: "🎯"},
+    { to: "/browse", label: "Browse Skills" ,icon: "🔍"},
+    { to: "/sessions", label: "Sessions" ,icon: "📅"},
+    { to: "/chat", label: "Chat" ,icon: "💬"},
+    { to: "/leaderboard", label: "Leaderboard" ,icon: "🏆"},
   ];
 
   const adminLinks = [
