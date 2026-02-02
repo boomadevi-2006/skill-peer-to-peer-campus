@@ -2,6 +2,187 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api";
 
+// Helper function to normalize skill titles for case-insensitive grouping
+const normalizeSkillTitle = (title) => title?.toLowerCase().trim() || "";
+
+// Get icon for a skill based on its name
+const getSkillIcon = (title) => {
+  const normalized = normalizeSkillTitle(title);
+  
+  const iconMap = {
+    // Programming Languages
+    'c': '🇨',
+    'c++': '𝐂++',
+    'c#': '🎯',
+    'java': '☕',
+    'javascript': '𝐉𝐒',
+    'js': '𝐉𝐒',
+    'typescript': '𝐓𝐒',
+    'ts': '𝐓𝐒',
+    'python': '🐍',
+    'ruby': '💎',
+    'go': '🐹',
+    'rust': '🦀',
+    'swift': '🍎',
+    'kotlin': '🤖',
+    'php': '🐘',
+    'perl': '🐪',
+    'scala': '⚡',
+    
+    // Web Technologies
+    'react': '⚛️',
+    'reactjs': '⚛️',
+    'angular': '🅰️',
+    'vue': '💚',
+    'vuejs': '💚',
+    'node': '🟢',
+    'nodejs': '🟢',
+    'express': '🚂',
+    'html': '🌐',
+    'css': '🎨',
+    'sass': '💅',
+    'less': '🟤',
+    
+    // Databases
+    'mongodb': '🍃',
+    'mysql': '🐬',
+    'postgresql': '🐘',
+    'redis': '🔴',
+    'sql': '📊',
+    'nosql': '📦',
+    
+    // Mobile Development
+    'android': '🤖',
+    'ios': '🍎',
+    'react native': '⚛️',
+    'flutter': '🦋',
+    'mobile development': '📱',
+    
+    // Data Science & AI
+    'machine learning': '🧠',
+    'ml': '🧠',
+    'deep learning': '🧠',
+    'artificial intelligence': '🤖',
+    'ai': '🤖',
+    'data science': '📊',
+    'data analysis': '📈',
+    'pandas': '🐼',
+    'numpy': '🔢',
+    'tensorflow': '🧮',
+    
+    // DevOps & Cloud
+    'docker': '🐳',
+    'kubernetes': '⚓',
+    'aws': '☁️',
+    'azure': '🟦',
+    'gcp': '☁️',
+    'firebase': '🔥',
+    'github': '🐙',
+    'git': '📌',
+    'ci/cd': '🔄',
+    'jenkins': '⚙️',
+    
+    // Other Technologies
+    'graphql': '🔮',
+    'rest api': '🌐',
+    'blockchain': '⛓️',
+    'ethereum': '💎',
+    'cybersecurity': '🔐',
+    'security': '🔐',
+    'networking': '🌐',
+    'linux': '🐧',
+    'unix': '💻',
+    'windows': '🪟',
+    
+    // Soft Skills
+    'communication': '💬',
+    'leadership': '👑',
+    'teamwork': '🤝',
+    'problem solving': '🧩',
+    'time management': '⏰',
+    
+    // Design
+    'ui/ux': '🎨',
+    'figma': '🎨',
+    'adobe xd': '🎨',
+    'photoshop': '🖼️',
+    'illustrator': '✏️',
+    
+    // General
+    'web development': '🌐',
+    'software development': '💻',
+    'programming': '💻',
+    'coding': '💻',
+    'development': '🛠️',
+    'data structures': '📚',
+    'algorithms': '📐',
+    'dsa': '📚',
+  };
+  
+  // Check exact match first
+  if (iconMap[normalized]) {
+    return iconMap[normalized];
+  }
+  
+  // Check partial matches
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return icon;
+    }
+  }
+  
+  // Default icon
+  return '💡';
+};
+
+
+// Group skills by normalized title (case-insensitive) and collect all students
+const groupSkillsWithStudents = (skills, sessions) => {
+  const skillGroups = new Map();
+  
+  skills.forEach((skill) => {
+    const normalizedTitle = normalizeSkillTitle(skill.title);
+    
+    if (!skillGroups.has(normalizedTitle)) {
+      skillGroups.set(normalizedTitle, {
+        originalTitles: new Set(),
+        categories: new Set(),
+        skills: [],
+        students: new Map(), // Map studentId -> student info
+      });
+    }
+    
+    const group = skillGroups.get(normalizedTitle);
+    
+    // Store original title (use the first one encountered)
+    group.originalTitles.add(skill.title);
+    group.categories.add(skill.category);
+    group.skills.push(skill);
+    
+    // Find students who have this skill (from sessions where this skill was taught)
+    const skillSessions = sessions.filter((s) => 
+      s.skillId?._id === skill._id || s.skillId === skill._id
+    );
+    
+    skillSessions.forEach((session) => {
+      if (session.learnerId && !group.students.has(session.learnerId._id)) {
+        group.students.set(session.learnerId._id, session.learnerId);
+      }
+    });
+  });
+  
+  // Convert to array with display format
+  return Array.from(skillGroups.entries()).map(([normalizedTitle, group]) => ({
+    displayTitle: Array.from(group.originalTitles)[0] || normalizedTitle, // Use first original title for display
+    normalizedTitle,
+    categories: Array.from(group.categories),
+    skillCount: group.skills.length,
+    skills: group.skills,
+    students: Array.from(group.students.values()),
+    mergedCount: group.skills.length - 1, // Number of additional entries merged
+  }));
+};
+
 export default function AdminDashboard({ tab: propTab }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,13 +198,19 @@ export default function AdminDashboard({ tab: propTab }) {
   const [expandedStudentId, setExpandedStudentId] = useState(null);
   const [skillSearchQuery, setSkillSearchQuery] = useState("");
   const [skillSearchType, setSkillSearchType] = useState("all");
+  const [expandedSkillTitle, setExpandedSkillTitle] = useState(null);
 
   useEffect(() => {
     if (tab === "dashboard" || !tab) {
       setLoading(true);
-      api
-        .get("/api/admin/stats")
-        .then((r) => setStats(r.data))
+      Promise.all([
+        api.get("/api/admin/stats"),
+        api.get("/api/admin/skills"),
+      ])
+        .then(([statsRes, skillsRes]) => {
+          setStats(statsRes.data);
+          setSkills(skillsRes.data);
+        })
         .catch(() => {})
         .finally(() => setLoading(false));
     } else if (tab === "students") {
@@ -79,15 +266,46 @@ export default function AdminDashboard({ tab: propTab }) {
     };
     return configs[status] || "badge-neutral";
   };
+  // Memoize grouped skills with students for case-insensitive matching
+  const groupedSkills = useMemo(() => groupSkillsWithStudents(skills, sessions), [skills, sessions]);
 
+  // Get unique available skills (from Skills module) - case-insensitive
+  const uniqueAvailableSkills = useMemo(() => {
+    const skillMap = new Map();
+    
+    skills.forEach((skill) => {
+      const normalized = normalizeSkillTitle(skill.title);
+      
+      if (!skillMap.has(normalized)) {
+        skillMap.set(normalized, {
+          title: skill.title,
+          category: skill.category,
+          mentors: new Set(),
+        });
+      }
+      
+      const skillData = skillMap.get(normalized);
+      if (skill.mentorId) {
+        skillData.mentors.add(skill.mentorId._id || skill.mentorId);
+      }
+    });
+    
+    return Array.from(skillMap.values());
+  }, [skills]);
   // Simple session card used by SessionsManagement
+  
   function SessionCard({ session }) {
     const skill = session.skill || session.skillId?.title || session.skillId?.title;
     const mentorName = session.mentorName || session.mentorId?.name || session.mentorId?.name;
     const learnerName = session.learnerName || session.learnerId?.name || session.learnerId?.name;
     const mentorEmail = session.mentorEmail || session.mentorId?.email || session.mentorId?.email;
     const learnerEmail = session.learnerEmail || session.learnerId?.email || session.learnerId?.email;
-
+      // Define statCards after uniqueAvailableSkills to avoid reference errors
+  const statCards = [
+    { label: "Students", value: stats.userCount, icon: "👥", color: "from-blue-400 to-indigo-400" },
+    { label: "Skills", value: uniqueAvailableSkills.length, icon: "🛠️", color: "from-purple-400 to-pink-400" },
+    { label: "Sessions", value: stats.sessionCount, icon: "📅", color: "from-green-400 to-emerald-400" },
+  ];
     return (
       <div className="card-elevated p-4">
         <div className="flex items-start justify-between gap-4">
@@ -273,38 +491,44 @@ export default function AdminDashboard({ tab: propTab }) {
 
       {/* Dashboard quick links */}
       {(tab === "dashboard" || !tab) && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          {[
-            { to: "/admin/students", label: "Students", desc: "View all students" },
-            { to: "/admin/skills", label: "Skills", desc: "Manage skills" },
-            { to: "/admin/sessions", label: "Sessions", desc: "View sessions" },
-            { to: "/admin/leaderboard", label: "Leaderboard", desc: "Top mentors" },
-          ].map((link, index) => (
-            <button
-              key={link.to}
-              onClick={() => go(link.to.replace("/admin/", ""))}
-              className={`card-elevated p-5 text-left group animate-fade-in flex items-center gap-4`}
-              style={{ animationDelay: `${(index + 3) * 100}ms` }}
-            >
-              <div
-                className={`w-12 h-12 rounded-xl ${
-                  index === 0
-                    ? "bg-blue-50 hover:bg-blue-100 text-blue-600"
-                    : index === 1
-                    ? "bg-purple-50 hover:bg-purple-100 text-purple-600"
-                    : index === 2
-                    ? "bg-green-50 hover:bg-green-100 text-green-600"
-                    : "bg-yellow-50 hover:bg-yellow-100 text-yellow-600"
-                } flex items-center justify-center text-xl transition-transform group-hover:scale-110`}
-              >
-                {index === 0 ? ">" : index === 1 ? "*" : index === 2 ? "=" : "#"}
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800">{link.label}</h3>
-                <p className="text-gray-500 text-sm">{link.desc}</p>
-              </div>
-            </button>
-          ))}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-bold text-gray-800">Available Skills</h2>
+            <span className="badge badge-info">{uniqueAvailableSkills.length} skills</span>
+          </div>
+          
+          {uniqueAvailableSkills.length === 0 ? (
+            <div className="card-elevated p-8 text-center">
+              <div className="text-4xl mb-2">🛠️</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">No skills available</h3>
+              <p className="text-gray-500">Skills offered by mentors will appear here</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {uniqueAvailableSkills.map((skill, index) => (
+                <div
+                  key={skill.title}
+                  className="card-elevated p-5 flex items-center gap-4 hover:shadow-lg transition-all animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-3xl shadow-md">
+                      {getSkillIcon(skill.title)}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-800 text-lg mb-2">{skill.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="badge badge-neutral text-xs">{skill.category}</span>
+                      <span className="text-sm text-gray-500">
+                        {skill.mentors.size} {skill.mentors.size === 1 ? 'mentor' : 'mentors'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
