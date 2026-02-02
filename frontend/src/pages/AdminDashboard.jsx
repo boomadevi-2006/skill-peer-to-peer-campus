@@ -50,7 +50,7 @@ export default function AdminDashboard({ tab: propTab }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-primary-dark mb-2">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold text-primary-dark mb-2">Admin Dashboards</h1>
       <p className="text-gray-600 mb-6">Monitor users, skills, sessions, and leaderboard.</p>
 
       {(tab === "dashboard" || !tab) && (
