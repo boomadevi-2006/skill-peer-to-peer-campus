@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api";
 
@@ -15,6 +15,8 @@ export default function AdminDashboard({ tab: propTab }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
+  const [skillSearchQuery, setSkillSearchQuery] = useState("");
+  const [skillSearchType, setSkillSearchType] = useState("all");
 
   useEffect(() => {
     if (tab === "dashboard" || !tab) {
@@ -78,11 +80,166 @@ export default function AdminDashboard({ tab: propTab }) {
     return configs[status] || "badge-neutral";
   };
 
+  // Simple session card used by SessionsManagement
+  function SessionCard({ session }) {
+    const skill = session.skill || session.skillId?.title || session.skillId?.title;
+    const mentorName = session.mentorName || session.mentorId?.name || session.mentorId?.name;
+    const learnerName = session.learnerName || session.learnerId?.name || session.learnerId?.name;
+    const mentorEmail = session.mentorEmail || session.mentorId?.email || session.mentorId?.email;
+    const learnerEmail = session.learnerEmail || session.learnerId?.email || session.learnerId?.email;
+
+    return (
+      <div className="card-elevated p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-gray-800">{skill}</h3>
+            <p className="text-sm text-gray-500">
+              <strong>Mentor:</strong> {mentorName} • {mentorEmail}
+            </p>
+            <p className="text-sm text-gray-500">
+              <strong>Learner:</strong> {learnerName} • {learnerEmail}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">{new Date(session.date).toLocaleDateString()}</p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <span className={`badge ${getStatusBadge(session.status)}`}>{session.status}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Sessions management UI for Admin tab
+  function SessionsManagement({ sessions, loading }) {
+    const [activeStatus, setActiveStatus] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const filteredSessions = useMemo(() => {
+      return (sessions || []).filter((session) => {
+        const matchesStatus = activeStatus === "all" || session.status === activeStatus;
+        const searchLower = (searchTerm || "").toLowerCase().trim();
+        if (!searchLower) return matchesStatus;
+
+        const skill = (session.skill || session.skillId?.title || "").toLowerCase();
+        const mentorName = (session.mentorName || session.mentorId?.name || "").toLowerCase();
+        const learnerName = (session.learnerName || session.learnerId?.name || "").toLowerCase();
+        const mentorEmail = (session.mentorEmail || session.mentorId?.email || "").toLowerCase();
+        const learnerEmail = (session.learnerEmail || session.learnerId?.email || "").toLowerCase();
+
+        const matchesSearch = searchLower.length === 1
+          ? skill.includes(searchLower)
+          : skill.includes(searchLower) ||
+            mentorName.includes(searchLower) ||
+            learnerName.includes(searchLower) ||
+            mentorEmail.includes(searchLower) ||
+            learnerEmail.includes(searchLower);
+
+        return matchesStatus && matchesSearch;
+      });
+    }, [sessions, activeStatus, searchTerm]);
+
+    const tabs = [
+      { key: "all", label: "All Sessions", count: (sessions || []).length },
+      { key: "pending", label: "Pending", count: (sessions || []).filter((s) => s.status === "pending").length },
+      { key: "accepted", label: "Accepted", count: (sessions || []).filter((s) => s.status === "accepted").length },
+      { key: "completed", label: "Completed", count: (sessions || []).filter((s) => s.status === "completed").length },
+    ];
+
+    return (
+      <div className="animate-fade-in">
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <svg
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by skills,mentors,learner,email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveStatus(tab.key)}
+              className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                activeStatus === tab.key
+                  ? "bg-primary text-white shadow-lg shadow-primary/30"
+                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+              }`}
+            >
+              {tab.label}
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                activeStatus === tab.key ? "bg-white/20" : "bg-gray-100"
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm animate-pulse">
+                <div className="h-4 bg-gray-100 rounded w-1/3 mb-4"></div>
+                <div className="h-6 bg-gray-100 rounded w-2/3 mb-4"></div>
+                <div className="h-4 bg-gray-100 rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+            <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">No sessions found</h3>
+            <p className="text-gray-500">
+              {activeStatus === "all"
+                ? "No sessions have been created yet"
+                : `No ${activeStatus} sessions available`}
+            </p>
+          </div>
+        ) : (
+          <div key={searchTerm + activeStatus} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredSessions.map((session) => (
+              <SessionCard key={session.id || session._id} session={session} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const getPageTitle = () => {
+    const titles = {
+      dashboard: { title: "Admin Dashboard", subtitle: "Monitor and manage your campus learning community" },
+      students: { title: "Students", subtitle: "View and manage all registered students" },
+      skills: { title: "Skills Management", subtitle: "View skills offered by mentors" },
+      sessions: { title: "Sessions Management", subtitle: "View and manage all learning sessions" },
+      leaderboard: { title: "Leaderboard", subtitle: "Top mentors by points" },
+    };
+    return titles[tab] || titles.dashboard;
+  };
+
+  const pageInfo = getPageTitle();
+
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
-        <h1 className="section-title">Admin Dashboard</h1>
-        <p className="section-subtitle">Monitor and manage your campus learning community</p>
+        <h1 className="section-title">{pageInfo.title}</h1>
+        <p className="section-subtitle">{pageInfo.subtitle}</p>
       </div>
 
       {/* Stats */}
@@ -280,7 +437,41 @@ export default function AdminDashboard({ tab: propTab }) {
       {tab === "skills" && (
         <div className="card-elevated overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-bold text-gray-800">All Skills</h2>
+            <h2 className="text-lg font-bold text-gray-800">Skills by Student</h2>
+          </div>
+
+          <div className="mb-6 flex gap-3">
+            <select
+              value={skillSearchType}
+              onChange={(e) => setSkillSearchType(e.target.value)}
+              className="input-field w-32 sm:w-48"
+            >
+              <option value="all">All</option>
+              <option value="student">Student</option>
+              <option value="skills">Skills</option>
+            </select>
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={skillSearchQuery}
+                onChange={(e) => setSkillSearchQuery(e.target.value)}
+                className="input-field w-full pl-10"
+                placeholder="Search..."
+              />
+            </div>
           </div>
 
           {loading ? (
@@ -299,22 +490,45 @@ export default function AdminDashboard({ tab: propTab }) {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Title</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Category</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Mentor</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Student Name</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Skills</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {skills.map((s) => (
-                    <tr key={s._id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{s.title}</td>
-                      <td className="py-3 px-4">
-                        <span className="badge badge-neutral">{s.category}</span>
-                      </td>
+                  {Object.values(
+                    skills
+                      .filter((s) => {
+                        const q = skillSearchQuery.trim().toLowerCase();
+                        if (!q) return true;
+                        const studentName = s.mentorId?.name?.toLowerCase() || "";
+                        const skillTitle = s.title?.toLowerCase() || "";
+
+                        if (skillSearchType === "student") {
+                          return studentName.includes(q);
+                        }
+                        if (skillSearchType === "skills") {
+                          return skillTitle.includes(q);
+                        }
+                        return studentName.includes(q) || skillTitle.includes(q);
+                      })
+                      .reduce((acc, skill) => {
+                        const mentorId = skill.mentorId?._id;
+                        if (!mentorId) return acc;
+                        if (!acc[mentorId]) {
+                          acc[mentorId] = {
+                            mentor: skill.mentorId,
+                            skills: [],
+                          };
+                        }
+                        acc[mentorId].skills.push(skill);
+                        return acc;
+                      }, {})
+                  ).map(({ mentor, skills: mentorSkills }) => (
+                    <tr key={mentor._id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <div className="avatar text-xs">
-                            {s.mentorId?.name
+                            {mentor.name
                               ?.split(" ")
                               .map((n) => n[0])
                               .join("")
@@ -322,9 +536,18 @@ export default function AdminDashboard({ tab: propTab }) {
                               .slice(0, 2)}
                           </div>
                           <div>
-                            <p className="font-medium">{s.mentorId?.name}</p>
-                            <p className="text-xs text-gray-500">{s.mentorId?.email}</p>
+                            <p className="font-medium">{mentor.name}</p>
+                            <p className="text-xs text-gray-500">{mentor.email}</p>
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-2">
+                          {mentorSkills.map((s) => (
+                            <span key={s._id} className="badge badge-neutral">
+                              {s.title}
+                            </span>
+                          ))}
                         </div>
                       </td>
                     </tr>
@@ -338,60 +561,7 @@ export default function AdminDashboard({ tab: propTab }) {
 
       {/* Sessions table */}
       {tab === "sessions" && (
-        <div className="card-elevated overflow-hidden">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-bold text-gray-800">All Sessions</h2>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">No sessions</h3>
-              <p className="text-gray-500">No sessions scheduled</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Skill</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Learner</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Mentor</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Date</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.map((s) => (
-                    <tr key={s._id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{s.skillId?.title}</td>
-                      <td className="py-3 px-4">
-                        <p className="font-medium">{s.learnerId?.name}</p>
-                        <p className="text-xs text-gray-500">{s.learnerId?.email}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <p className="font-medium">{s.mentorId?.name}</p>
-                        <p className="text-xs text-gray-500">{s.mentorId?.email}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <p>{new Date(s.date).toLocaleDateString()}</p>
-                        <p className="text-xs text-gray-500">{s.timeSlot || "-"}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`badge ${getStatusBadge(s.status)}`}>{s.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <SessionsManagement sessions={sessions} loading={loading} />
       )}
 
       {/* Leaderboard */}
