@@ -148,11 +148,6 @@ export default function AdminDashboard({ tab: propTab }) {
     return (
       <div className="animate-fade-in">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Session Management</h2>
-          <p className="text-gray-500">View and manage all learning sessions</p>
-        </div>
-
-        <div className="mb-6">
           <div className="relative max-w-md">
             <svg
               className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -227,11 +222,24 @@ export default function AdminDashboard({ tab: propTab }) {
     );
   }
 
+  const getPageTitle = () => {
+    const titles = {
+      dashboard: { title: "Admin Dashboard", subtitle: "Monitor and manage your campus learning community" },
+      students: { title: "Students", subtitle: "View and manage all registered students" },
+      skills: { title: "Skills Management", subtitle: "View skills offered by mentors" },
+      sessions: { title: "Sessions Management", subtitle: "View and manage all learning sessions" },
+      leaderboard: { title: "Leaderboard", subtitle: "Top mentors by points" },
+    };
+    return titles[tab] || titles.dashboard;
+  };
+
+  const pageInfo = getPageTitle();
+
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
-        <h1 className="section-title">Admin Dashboard</h1>
-        <p className="section-subtitle">Monitor and manage your campus learning community</p>
+        <h1 className="section-title">{pageInfo.title}</h1>
+        <p className="section-subtitle">{pageInfo.subtitle}</p>
       </div>
 
       {/* Stats */}

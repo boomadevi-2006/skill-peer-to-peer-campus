@@ -27,11 +27,11 @@ export default function Layout() {
   ];
 
   const adminLinks = [
-    { to: "/admin", label: "Dashboard" },
-    { to: "/admin/students", label: "Students" },
-    { to: "/admin/skills", label: "Skills" },
-    { to: "/admin/sessions", label: "Sessions" },
-    { to: "/admin/leaderboard", label: "Leaderboard" },
+    { to: "/admin", label: "Dashboard", icon: "📊" },
+    { to: "/admin/students", label: "Students", icon: "👥" },
+    { to: "/admin/skills", label: "Skills", icon: "🎯" },
+    { to: "/admin/sessions", label: "Sessions", icon: "📅" },
+    { to: "/admin/leaderboard", label: "Leaderboard", icon: "🏆" },
   ];
 
   const links = isAdmin ? adminLinks : studentLinks;
@@ -73,6 +73,7 @@ export default function Layout() {
                 }
                 onClick={() => setSidebarOpen(false)}
               >
+                {link.icon && <span className="text-lg">{link.icon}</span>}
                 <span>{link.label}</span>
               </NavLink>
             ))}
