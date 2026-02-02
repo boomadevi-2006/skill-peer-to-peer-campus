@@ -5,40 +5,82 @@ import { api } from "../api";
 
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
+
   useEffect(() => {
     api.get("/api/auth/me").then((r) => updateUser(r.data)).catch(() => {});
   }, [updateUser]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const stats = [
+    { label: "Your Points", value: user?.points ?? 0, description: "Earn points by mentoring" },
+    { label: "Skills to Teach", value: user?.skills?.length || 0, description: "Share your expertise" },
+    { label: "Sessions Joined", value: user?.sessionsAsLearner?.length || 0, description: "Learning journey" },
+  ];
+
+  const quickLinks = [
+    { to: "/skills", label: "My Skills", desc: "Manage what you teach" },
+    { to: "/browse", label: "Browse Skills", desc: "Find something new" },
+    { to: "/sessions", label: "Sessions", desc: "Your learning sessions" },
+    { to: "/chat", label: "Chat", desc: "Connect with peers" },
+    { to: "/leaderboard", label: "Leaderboard", desc: "Top mentors" },
+  ];
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-primary-dark mb-2">Dashboard</h1>
-      <p className="text-gray-600 mb-6">Welcome, {user?.name}.</p>
+    <div className="animate-fade-in">
+      {/* Welcome section */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">
+          {getGreeting()}, {user?.name?.split(" ")[0]}!
+        </h1>
+        <p className="text-gray-500 mt-1">Here's what's happening with your learning journey</p>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+        {stats.map((stat, index) => (
+          <div
+            key={stat.label}
+            className="stat-card animate-fade-in"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
+                <p className="text-4xl font-bold text-gray-800 mt-2">{stat.value}</p>
+                <p className="text-gray-400 text-sm mt-1">{stat.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick links */}
+      <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="card border-primary/20">
-          <h2 className="text-lg font-semibold text-primary">Your Points</h2>
-          <p className="text-3xl font-bold text-primary-dark mt-2">{user?.points ?? 0}</p>
-          <p className="text-sm text-gray-500 mt-1">Earn points by mentoring</p>
-        </div>
-        <Link to="/skills" className="card border-primary/20 hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold text-primary">My Skills</h2>
-          <p className="text-sm text-gray-600 mt-2">Skills you can teach</p>
-        </Link>
-        <Link to="/browse" className="card border-primary/20 hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold text-primary">Browse Skills</h2>
-          <p className="text-sm text-gray-600 mt-2">Find skills to learn</p>
-        </Link>
-        <Link to="/sessions" className="card border-primary/20 hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold text-primary">Sessions</h2>
-          <p className="text-sm text-gray-600 mt-2">Session requests</p>
-        </Link>
-        <Link to="/chat" className="card border-primary/20 hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold text-primary">Chat</h2>
-          <p className="text-sm text-gray-600 mt-2">Coordinate with peers</p>
-        </Link>
-        <Link to="/leaderboard" className="card border-primary/20 hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold text-primary">Leaderboard</h2>
-          <p className="text-sm text-gray-600 mt-2">Top mentors</p>
-        </Link>
+        {quickLinks.map((link, index) => (
+          <Link
+            key={link.to}
+            to={link.to}
+            className={`card-elevated p-5 group animate-fade-in flex items-center gap-4`}
+            style={{ animationDelay: `${(index + 3) * 100}ms` }}
+          >
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-xl transition-transform group-hover:scale-110">
+              →
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 group-hover:text-primary transition-colors">
+                {link.label}
+              </h3>
+              <p className="text-gray-500 text-sm">{link.desc}</p>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );
